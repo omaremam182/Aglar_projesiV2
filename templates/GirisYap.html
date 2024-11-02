@@ -1,0 +1,22 @@
+{% extends "parent.html" %}
+{% block icerik %}
+    <div class="main-style">
+        <form method="post" class="form-container">
+            <legend class ="cap_Login">
+                <caption> <h3>Login</h3></caption>
+            </legend>
+        
+            {{ f.telefonNo.label(class ="label-style") }}
+            {{ f.telefonNo(class ="input-style",oninput="this.value = this.value.replace(/[^0-9]/g, '')")}}
+        
+            {{ f.sifre.label(class ="label-style") }}
+            {{f.sifre(class ="input-style")}}
+        
+            <a href="GirisYap.html">Hesabım Yok</a> <br> <br>
+        
+            {{f.buton(class ="submit-button")}}
+            
+            <a href="sifreSifirlama.html">Şifremi Unuttum</a>
+        </form>
+    </div>
+{% endblock %}
