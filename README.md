@@ -1,1 +1,0 @@
-# Aglar_projesiV2
