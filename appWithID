@@ -1,10 +1,8 @@
-from queue import Full
 from flask import Flask, flash , render_template,redirect, request, session, url_for
 from Forms import *
 import time
-# from firebase_admin import db
 from firebase_config22 import fire,db
-from datetime import datetime, timedelta
+import firebase_config22
 
 app = Flask (__name__)
 app.config["SECRET_KEY"] = '5a46fc92d36e604f423286c04875437f' 
@@ -19,7 +17,7 @@ def check_session_timeout():
     # Şu anki zaman
     current_time = time.time()
 
-    # Son aktivite zamanı ile şu anki zaman arasındaki fark
+    # Son aktivite zamanı ile şu anki zaman farkı
     time_since_last_activity = current_time - session['last_activity']
     if time_since_last_activity > 300:  # 300 saniye = 5 dakika
         session.clear()  
@@ -38,8 +36,12 @@ def kayitOl():
         sifre = form.sifre.data
         telefon = form.telefonNo.data
         kullaniciAdi = form.kullaniciAdi.data
-
-
+        
+        for dosya in firebase_config22.tum_kullanicilar:
+            us =  dosya.to_dict()
+            if telefon == us["telefonNo"] :
+                flash("Bu telefon no zaten kullanımda."," error")
+                return render_template("KayitOl.html", baslik="Kayıt Ol", f=form)
         try:
             uye = dogrulama.create_user_with_email_and_password(email, sifre)
             # dogrulama.send_email_verification(uye['idToken'])
@@ -50,12 +52,11 @@ def kayitOl():
                 "kullaniciAdi": kullaniciAdi,
                 "email": email 
             }
-            db.collection("users").document(uye_id).set(user_data) 
 
+            db.collection("users").document(uye_id).set(user_data) 
             flash("Kayıt başarılı! ", "success")
             session['last_activity'] = time.time()
             return redirect(url_for('home', user_id=uye_id))
-
         
         except Exception as e:
             flash("Bu e-posta adresi zaten kullanımda. Lütfen başka bir e-posta girin"," error")
@@ -80,7 +81,7 @@ def login():
             else:
                 flash("Giriş bilgileri yanlış. Lütfen tekrar deneyin.", "error")
         except Exception as e:
-            flash("Giriş yaparken bir hata oluştu: " + str(e), "error")
+            flash("Giriş yaparken bir hata oluştu: ", "error")
 
     return render_template("GirisYap.html", baslik="Login", f=form2)
 
@@ -103,26 +104,26 @@ def home():
     user_id = request.args.get('user_id')
     print(f"hello {user_id}")
 
-    if not user_id:
-        flash("Geçersiz kullanıcı ID'si.", "error")
-        return redirect(url_for("kayitOl"))
+    # if not user_id:
+    #     flash("Geçersiz kullanıcı ID'si.", "error")
+    #     return redirect(url_for("kayitOl"))
     
     try:
-        user_doc = db.collection("users").document(user_id).get()
         
-        if user_doc.exists:  
-            user_data = user_doc.to_dict()
-            print(f"Kullanıcı verileri: {user_data}")
-        else:
-            flash("Kullanıcı verileri bulunamadı.", "error")
-            return redirect(url_for("kayitOl"))
-        
+        kullaniciAdlari = [
+            {
+                "ad": doc.to_dict().get("kullaniciAdi", "Bilinmeyen Kullanıcı"),
+                "telefonNo": doc.to_dict().get("telefonNo", "Telefon Yok")
+            }
+            for doc in firebase_config22.tum_kullanicilar
+        ]
+        print("kullanici adlari tamam")
         # Oturum kontrolü
         result = check_session_timeout()
-        if result:  # yönlendirme olursa, return et
+        if result:  
             return result
         
-        return render_template("home.html", user_data=user_data)
+        return render_template("home.html",  users = kullaniciAdlari )
     except Exception as e:
         flash("Bir hata oluştu. Lütfen daha sonra tekrar deneyin.", "error")
         return redirect(url_for("kayitOl"))
